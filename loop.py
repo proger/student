@@ -44,8 +44,8 @@ def update_input(frame, iline, smat: AxesImage, oline, stream, chunk):
     """Update input and output plots with audio data from stream"""
     global state, lr
     update_audio_data(stream, chunk)
-    #write = audio_data / CHUNK**0.5
-    write = audio_data / (np.linalg.norm(audio_data) + 0.1)
+    write = audio_data / 2
+    #write = audio_data / (np.linalg.norm(audio_data) + 0.)
     iline.set_ydata(write)
     state, read = forward(state, write, lr)
     smat.set_data(state)
@@ -76,7 +76,7 @@ fig.canvas.manager.resize(1500, 1000)
 x = np.arange(0, 2 * CHUNK, 2)
 iline, = iax.plot(x, np.random.rand(CHUNK))
 iax.set_title('input')
-yrange = 0.2
+yrange = 0.1
 iax.set_ylim(-yrange, yrange)
 iax.set_xlim(0, 2 * CHUNK)
 iax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
