@@ -17,7 +17,7 @@ audio_data = np.zeros(CHUNK)
 np.random.seed(0)
 state = np.zeros((KEY, CHUNK))
 to_key = np.random.rand(CHUNK, KEY) / KEY**0.5
-lr = 50
+lr = 1
 
 def update_audio_data(stream, chunk):
     """Update audio data from stream"""
@@ -44,7 +44,8 @@ def update_input(frame, iline, smat: AxesImage, oline, stream, chunk):
     """Update input and output plots with audio data from stream"""
     global state, lr
     update_audio_data(stream, chunk)
-    write = audio_data / CHUNK**0.5
+    #write = audio_data / CHUNK**0.5
+    write = audio_data / (np.linalg.norm(audio_data) + 0.1)
     iline.set_ydata(write)
     state, read = forward(state, write, lr)
     smat.set_data(state)
@@ -75,14 +76,14 @@ fig.canvas.manager.resize(1500, 1000)
 x = np.arange(0, 2 * CHUNK, 2)
 iline, = iax.plot(x, np.random.rand(CHUNK))
 iax.set_title('input')
-yrange = -0.01
+yrange = 0.2
 iax.set_ylim(-yrange, yrange)
 iax.set_xlim(0, 2 * CHUNK)
 iax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 iax.yaxis.set_major_locator(FixedLocator(np.linspace(-yrange, yrange, 6)))
 
 sax.set_title('state')
-smat = sax.matshow(state, cmap='rainbow', vmin=-0.01, vmax=0.01, aspect='auto')
+smat = sax.matshow(state, cmap='rainbow', vmin=-0.1, vmax=0.1, aspect='auto')
 sax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 sax.yaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 # remove spines
