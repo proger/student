@@ -6,8 +6,8 @@ from matplotlib.ticker import FixedLocator
 from matplotlib.image import AxesImage
 
 # Parameters
-CHUNK = 2048  # Buffer size
-KEY = 8
+CHUNK = 4096  # Buffer size
+KEY = 32
 RATE = 44100
 FPS = 100  # Lower frame rate to reduce CPU usage
 
@@ -17,7 +17,8 @@ audio_data = np.zeros(CHUNK)
 np.random.seed(0)
 state = np.zeros((KEY, CHUNK))
 to_key = np.random.rand(CHUNK, KEY) / KEY**0.5
-lr = 1
+lr = 0.9
+skip_update = False
 
 def update_audio_data(stream, chunk):
     """Update audio data from stream"""
@@ -35,6 +36,7 @@ def forward(state, x, beta):
     w_t = w_{t-1} + beta * (v_t - w_{t-1} k_t) * k_t^T
     """
     key, write = x @ to_key, x
+    key = key / np.linalg.norm(key)
     read = key @ state
     delta = write - read
     update = np.outer(delta, key).T
@@ -42,20 +44,23 @@ def forward(state, x, beta):
 
 def update_input(frame, iline, smat: AxesImage, oline, stream, chunk):
     """Update input and output plots with audio data from stream"""
-    global state, lr
+    global state, lr, skip_update
     update_audio_data(stream, chunk)
-    write = audio_data / 2
-    #write = audio_data / (np.linalg.norm(audio_data) + 0.)
+    write = audio_data
     iline.set_ydata(write)
     state, read = forward(state, write, lr)
-    smat.set_data(state)
-    print(state)
+    if not skip_update:
+        smat.set_data(state)
+        print(state)
+    else:
+        skip_update = False
     oline.set_ydata(read)
     return iline, smat, oline
 
 # Set up audio stream
 p = pyaudio.PyAudio()
-stream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+istream = p.open(format=pyaudio.paInt16, channels=1, rate=RATE, input=True, frames_per_buffer=CHUNK)
+ostream = p.open(format=pyaudio.paFloat32, channels=1, rate=RATE, output=True, frames_per_buffer=CHUNK)
 
 # Configure matplotlib
 plt.rcParams["figure.figsize"] = [7.00, 3.50]
@@ -83,7 +88,7 @@ iax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 iax.yaxis.set_major_locator(FixedLocator(np.linspace(-yrange, yrange, 6)))
 
 sax.set_title('state')
-smat = sax.matshow(state, cmap='rainbow', vmin=-0.1, vmax=0.1, aspect='auto')
+smat = sax.matshow(state, cmap='rainbow', vmin=-.05, vmax=.05, aspect='auto')
 sax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 sax.yaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 # remove spines
@@ -103,12 +108,21 @@ oax.yaxis.set_major_locator(FixedLocator(np.linspace(-yrange, yrange, 6)))
 #et_icon(icon_path)
 
 # Animate plots
-ani = FuncAnimation(fig, update_input, fargs=(iline, smat, oline, stream, CHUNK), interval=1000 // FPS, blit=True, save_count=CHUNK)
+ani = FuncAnimation(fig, update_input, fargs=(iline, smat, oline, istream, CHUNK), interval=1000 // FPS, blit=True, save_count=CHUNK)
 
 # Display plot
-plt.show(block=True)
+plt.show(block=False)
+
+def run():
+    try:
+        while True:
+            plt.pause(10)
+    except KeyboardInterrupt:
+        return
+
+run()
 
 ## Cleanup
-#stream.stop_stream()
-#stream.close()
+#istream.stop_stream()
+#istream.close()
 #p.terminate()
