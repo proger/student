@@ -32,7 +32,7 @@ def update_audio_data(stream, chunk):
 def forward(state, x, beta):    
     """DeltaNet
 
-    k_t, v_t = x_t, x_t
+    k_t, v_t = to_key(x_t), x_t
     w_t = w_{t-1} + beta * (v_t - w_{t-1} k_t) * k_t^T
     """
     key, write = x @ to_key, x
@@ -104,9 +104,6 @@ oax.set_ylim(-yrange, yrange)
 oax.xaxis.set_major_locator(FixedLocator(2**np.arange(8,12)))
 oax.yaxis.set_major_locator(FixedLocator(np.linspace(-yrange, yrange, 6)))
 
-# Set up icon
-#et_icon(icon_path)
-
 # Animate plots
 ani = FuncAnimation(fig, update_input, fargs=(iline, smat, oline, istream, CHUNK), interval=1000 // FPS, blit=True, save_count=CHUNK)
 
@@ -121,8 +118,3 @@ def run():
         return
 
 run()
-
-## Cleanup
-#istream.stop_stream()
-#istream.close()
-#p.terminate()
